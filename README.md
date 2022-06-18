@@ -110,6 +110,22 @@ This should also align with the business operation in a way that, if they 'trust
 - `SHAP`
 
 All 3 reports are somehow aligned in the same way, but I'll go through the insights with `SHAP`.
+## SHAP Summary Plot
+![image](https://user-images.githubusercontent.com/11977931/174437707-e18a608d-5b61-489f-95f4-c7c64362d028.png)
+
+- `sub_grade` and `grade` are encoded in such order that G > F > ... > B > A. So A is on low value, and G is on high. The plot says that the high values impact the probability in a negative way. 
+- `term` says `60 months` has negative effect and `36 months` has positive effect
+- `mort_acc_missing` is interesting and weird. If `mort_acc` is missing or not provided, it raises the probability of Fully Paid.
+- Generally the features that impact the prob. negatively (high value -> decreases prob.), for example,
+`revol_util`, `dti`, `open_acc`, `installment_inc_ratio`, `loan_amnt`
+- And the features that impact the prob. positively (high value -> increases prob.), such as, `annual_inc` which is somehow a common sense.
+
+## Mean SHAP Plot
+The `Summary Plot` seems to pack a lot of information, but it may be difficult to interpret for non-tech or business users.  
+Need a simple way to explain? Use Mean SHAP instead, easy to interpret, it simply tells how much pact each feature has to the prob. of being Fully Paid.
+But we lost the impact direction. 
+
+![image](https://user-images.githubusercontent.com/11977931/174438419-1d54f4db-0354-4291-bfa9-197da4efc8e4.png)
 
 
 
