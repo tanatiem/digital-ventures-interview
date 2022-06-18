@@ -127,6 +127,18 @@ But we lost the impact direction.
 
 ![image](https://user-images.githubusercontent.com/11977931/174438419-1d54f4db-0354-4291-bfa9-197da4efc8e4.png)
 
+# How to test deliverables
+```Python
+with open('data/model.pkl', 'rb') as f:
+    model = pickle.load(f)
+
+X_test = pd.read_csv('data/test_final.csv')
+y_test = X_test.pop('loan_status')
+
+y_score = model.predict_proba(X_test)[:,1]
+print(f"Test ROC-AUC: {roc_auc_score(y_test, y_score)}")
+```
+
 ### Remark
 The code is not so productionization-friendly. Should use `Pipeline`. In the real work environment, this would be redesigned to make a proper preprocessing pipeline for model serving.
 
