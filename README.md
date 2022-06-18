@@ -95,5 +95,23 @@ I did make sure that I didn't use Test set in the `eval_set` parameter to make s
 # Performance
 ## ROC Curve
 ![image](https://user-images.githubusercontent.com/11977931/174436934-22457ce7-40df-4fab-b473-46ec0f93e903.png)
+## Classification Report
+![image](https://user-images.githubusercontent.com/11977931/174437404-451a5510-a1cf-415b-9556-4591f9269aaf.png)
+
+`Precision` should be what we focus on and it's 0.91 on test set.
+
+Since our positive label is 'Fully Paid', that means from the predicted positive borrowers (TP+FP), how many are classified as Fully Paid correctly (TP).
+
+This should also align with the business operation in a way that, if they 'trust' the model, and approved the loan requests for 100 customers, 91 customers are correctly classified as Fully Paid.
+
+# Model Insights
+- `Feature Importance`
+- `Permuation Importance`
+- `SHAP`
+
+All 3 reports are somehow aligned in the same way, but I'll go through the insights with `SHAP`.
+
+
+
 
 
