@@ -68,4 +68,32 @@ It doesn't help much though. (some variable may not be normally distributed and 
 - Try fitting the model using `all features` using `XGBoost` and its default parameters. I Then check its `feature importance`
 - All of the above steps are just for a guildline to help picking features manually
 
-## 
+## Model Training
+- Use `XGBoost` only (The original idea was to use RandomForst as a baseline, and try LightGBM, and other models)
+- One way to address imbalanced problem using `XGBoost` is to specify `scale_pos_weight` parameter like this  
+```Python
+scale_pos_weight = (len(y_train) - sum(y_train)) / sum(y_train)
+```
+- `roc-auc` as the evaluation metrics.
+- In previous step, I fitted the model using `all features`.
+- Trying selecting `22 features` to train, and the roc-auc improves a bit. 
+- Try resampling methods - `Under-sampling`, `Over-sampling` and `SMOTE`. None of them improves the performance.
+- Hand-tune hyperparameter, the performance improves a bit.
+- Final Model - use Train+Validation to train and it improves Test Set performance.  
+I did make sure that I didn't use Test set in the `eval_set` parameter to make sure that test set is untouched
+
+| Experiment | Train-AUC | Valid-AUC | Test-AUC | Note |
+|---|---|---|---|---|
+| All features, default parameters | 0.7586 | 0.7211 | 0.7156 | |
+| Selected features, default params | 0.7544 | 0.7218 | 0.7169 | |
+| Selected features, default params, Under-sampling | 0.7631 | 0.7201 | 0.7120 | |
+| Selected features, default params, Over-sampling | 0.7527 | 0.7205 | 0.7142 | |
+| Selected features, default params, SMOTE | 0.9475 | 0.6956 | 0.6921 | Clearly overfitted |
+| Selected features, tuned params | 0.7422 | 0.7248 | 0.7190 | |
+| Final Model | 0.7615 | N/A | 0.7202 | Best |
+
+# Performance
+## ROC Curve
+![image](https://user-images.githubusercontent.com/11977931/174436934-22457ce7-40df-4fab-b473-46ec0f93e903.png)
+
+
