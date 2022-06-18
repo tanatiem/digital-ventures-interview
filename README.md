@@ -127,7 +127,7 @@ But we lost the impact direction.
 
 ![image](https://user-images.githubusercontent.com/11977931/174438419-1d54f4db-0354-4291-bfa9-197da4efc8e4.png)
 
-
-
+### Remark
+The code is not so productionization-friendly. Should use `Pipeline`. In the real work environment, this would be redesigned to make a proper preprocessing pipeline for model serving.
 
 
