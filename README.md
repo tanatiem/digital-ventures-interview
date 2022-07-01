@@ -86,52 +86,63 @@ I did make sure that I didn't use Test set in the `eval_set` parameter to make s
 
 # Performance
 ## ROC Curve
-![image](https://user-images.githubusercontent.com/11977931/174436934-22457ce7-40df-4fab-b473-46ec0f93e903.png)
+![image](https://user-images.githubusercontent.com/11977931/176827092-15a0ae49-4042-4840-84bc-7b1d97ff38d0.png)
+
 ## Classification Report
-![image](https://user-images.githubusercontent.com/11977931/174437404-451a5510-a1cf-415b-9556-4591f9269aaf.png)
+```
+==================== Train ====================
+              precision    recall  f1-score   support
 
-`Precision` should be what we focus on and it's 0.91 on test set.
+           0       0.46      0.83      0.59     39990
+           1       0.96      0.81      0.88    213466
 
-Since our positive label is 'Fully Paid', that means from the predicted positive borrowers (TP+FP), how many are classified as Fully Paid correctly (TP).
+    accuracy                           0.82    253456
+   macro avg       0.71      0.82      0.74    253456
+weighted avg       0.88      0.82      0.84    253456
 
-This should also align with the business operation in a way that, if they 'trust' the model, and approved the loan requests for 100 customers, 91 customers are correctly classified as Fully Paid.
+==================== Test ====================
+              precision    recall  f1-score   support
 
-# Model Insights
-- `Feature Importance`
-- `Permuation Importance`
-- `SHAP`
+           0       0.44      0.81      0.57      9959
+           1       0.96      0.81      0.88     53406
 
-All 3 reports are somehow aligned in the same way, but I'll go through the insights with `SHAP`.
-## SHAP Summary Plot
-![image](https://user-images.githubusercontent.com/11977931/174437707-e18a608d-5b61-489f-95f4-c7c64362d028.png)
-
-- `sub_grade` and `grade` are encoded in such order that G > F > ... > B > A. So A is on low value, and G is on high. The plot says that the high values impact the probability in a negative way. 
-- `term` says `60 months` has negative effect and `36 months` has positive effect
-- `mort_acc_missing` is interesting and weird. If `mort_acc` is missing or not provided, it raises the probability of Fully Paid.
-- Generally the features that impact the prob. negatively (high value -> decreases prob.), for example,
-`revol_util`, `dti`, `open_acc`, `installment_inc_ratio`, `loan_amnt`
-- And the features that impact the prob. positively (high value -> increases prob.), such as, `annual_inc` which is somehow a common sense.
-
-## Mean SHAP Plot
-The `Summary Plot` seems to pack a lot of information, but it may be difficult to interpret for non-tech or business users.  
-Need a simple way to explain? Use Mean SHAP instead, easy to interpret, it simply tells how much pact each feature has to the prob. of being Fully Paid.
-But we lost the impact direction. 
-
-![image](https://user-images.githubusercontent.com/11977931/174438419-1d54f4db-0354-4291-bfa9-197da4efc8e4.png)
-
-# How to test deliverables
-```Python
-with open('data/model.pkl', 'rb') as f:
-    model = pickle.load(f)
-
-X_test = pd.read_csv('data/test_final.csv')
-y_test = X_test.pop('loan_status')
-
-y_score = model.predict_proba(X_test)[:,1]
-print(f"Test ROC-AUC: {roc_auc_score(y_test, y_score)}")
+    accuracy                           0.81     63365
+   macro avg       0.70      0.81      0.73     63365
+weighted avg       0.88      0.81      0.83     63365
 ```
 
-### Remark
-The code is not so productionization-friendly. Should use `Pipeline`. In the real work environment, this would be redesigned to make a proper preprocessing pipeline for model serving.
+`Precision` should be what we focus on and it's 0.96 on test set.
+
+Since our positive label is `Fully Paid`, that means from the predicted positive borrowers (TP+FP), how many are classified as Fully Paid correctly (TP).
+
+This should also align with the business operation in a way that, if they 'trust' the model, and approved the loan requests for `100` customers, `96` customers are correctly classified as Fully Paid.
+
+## Score distribution (Normalized)
+![image](https://user-images.githubusercontent.com/11977931/176827449-e1fc31d6-5905-4b3e-a0e9-8e5fc322a55a.png)
+
+## Concern on using ZIP feature
+`ZIP` code is what I concern with its validity and it quite dominates the result.  
+Not using zip code, I got ROC-AUC around `0.72`. By putting it in, it goes up to `0.90`  
+In real practice, we may need to consider how this address is collected. Is it the contact address, home address? It can be changed. How old is this data. There are things to consider putting this into use.
+![image](https://user-images.githubusercontent.com/11977931/176828474-29f56651-1eb8-4919-84d6-032f4024e327.png)
+
+
+
+# Model Insights
+
+## SHAP Beeswarm
+This tells a lot.
+![image](https://user-images.githubusercontent.com/11977931/176827563-bfa8eb7e-cc7c-4a29-96fb-61affd95f0bf.png)
+- `zip`  
+Apart from my concern, it seems like some zip codes impact highly impact on both negative and positive ways.
+- `sub_grade`  
+The more grade gives negative impact in less probablity of Fully Paid (To be precise, log odd not probability). This seems true as G as encoded higher than A. The lower subgrade boosts chance of Fully Paid
+- `installment_inc_ratio`
+This ratio kinda represents the future debt obligation if the loan got accepted. The more of this value, the less of being Fully Paid
+
+## Mean SHAP Plot
+If the beeswarm above is too complicated for explaining to business users and stakeholders. Here goes this plot, just to show its impactness without direction.
+![image](https://user-images.githubusercontent.com/11977931/176827573-f224666a-8505-4b62-a97a-154a767eeff2.png)
+
 
 
