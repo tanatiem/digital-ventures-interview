@@ -16,57 +16,52 @@ I decdied on using XGBoost only and not to try other models due to time limitati
 
 ## Code Files
 In order to keep the code not too long, I divided them into 3 parts
-- `01 Clean.ipynb` is for data cleaning.
-- `02 Prep & EDA.ipynb` is for basic EDA, feature engineering, and data preprocessing
-- `03 Modeling.ipynb` is the main part where I split datasets, train the model, report model performance and interpretability.
+- `00 Clean.ipynb` is for data cleaning because the given dataset is not well-formed csv.
+- `01 Profiling.ipynb` is for basic EDA, using Pandas Profiling which can't be seen if you open from github directly.
+- `02 EDA.ipynb` explore data in terms of distributions between 0 and 1 classes.
+- `03 Modeling.ipynb` the code for preprocessing and build the model.
 
-Please note that each part produce output files after it's done. This is my personal habit to save state of the work.  
-In case something crashes, I don't have to restart all over. But the file are too big to upload due to GitHub limitation, not all the files are uploaded.
 
-# 1) Data Cleaning
-`01 Clean.ipynb`
+# 0) Data Cleaning
+`00 Clean.ipynb`
 - `pandas.read_csv` doesn't work with some corrupted records. Using `csv.reader` instead
 - Identify the corrupted rows by simply check the number of parsed tokens. If it's not `27`, remove.  
-- Removing 4 rows, and the whole data can be converted into `DataFrame`
-- Inspect data
-  - Check uniqueness
-  - Check data types and do the type conversion. Since we read it using `csv.reader`, the data type is not auto-detected.
-  - Upon checking data, I also remove a row with `annual_inc == 0`, because I assume that for the loan business, income should be required.
-  - Save the result file
+- Removing problematic rows, and the whole data can be converted into `DataFrame`
 
-# 2) Data preparation & EDA
-`02 Prep & EDA.ipynb`
-## Explore each of the variables
- - Distribution, Outliers
- - In case of numerical variables, I also check the distributions for Full Paid/Charged Off groups.
- - In case of categorical variables, I also check the contingency table for Full Paid/Charged Off groups.
+# 1) Data Profiling
+`01 Profiling.ipynb`
+Using pandas profiling, run an analysis on the original dataset. Then I tried preprocess and generate some more features and run again to get the idea on how the processed and generated features look like.
+
+# 2) EDA
+`02 EDA.ipynb`
+Explore each of the features manually, seeing distribution, descriptive statistics between 2 groups of Charged Off and Fully Paid.
+
+# 3) Modeling
+
 ## Feature engineering
-I generate many features, but in the end only two of them are used in the final model which are;
+Some generated features
 - `installment_inc_ratio`  
 $$ \frac{MonthlyInstallment}{AnnualIncome/12} $$
 Similar to DTI (debt-to-income), but according to the data dict, the requested loan amount is not included in the calculation. So I made this to measure the additional debt obligation to the borrower if the loan is accepted.
 - `mort_acc_missing`  
 Since 10% of the whole dataset of `mort_acc` (the number of mortgage accounts) are missing. So I imputed zero for missing values, and create a variable to tell that `mort_acc` is missing
+- `inc_not_verified`  
+Whether or not the reported income is verified based on `verification_status`. Not Verified goes to 1, else 0.
+- `zip`  
+Zip code extracted from `address` which I still have doubt the correctness since it has such small cardinality for zip code. It turns out to be the feature with the most predictive power.
+
 ## Categorical encoding
-After going through all the variables, one-by-one. If a variable is considered as a categorical, then it is converted using pandas `category` data type. There are both `Nominal` and `Ordinal` categories in this dataset. For the ordinal category, I have to specify the order manually.  
+Basically we deal with nominal category with One-hot encoding. But after some experiments, I found that One-hot and Oridnal are not significantly different for this dataset.  
 
-**All categories** are encoded using `Ordinal` encoding with reasons;  
-- I understand that `Nominal` categories should be encoded using One-Hot encoding (if its cardinality is not high), but it creates a lot of new features and tend to train the model slower with excessive features.  
-- Tree-based models are capable of learning from Nominal categories even if it's encoded using Ordinal way.
-
-# 3) Modeling
+At the end, I use `Ordial Encoding` for all categorical variables. The tree-based models are capable to learn from label-encoded nominal categories.
 
 ## Holdout test set
 Load preprocessed dataset from earlier step and split it into `Train`, `Validation` and `Test` sets with 0.6/0.2/0.2 proportion respectively.
 
 ## Feature selection
 - Check `Mutual Information Scores`  
-To see predictive power of features using the non-parametric method. But it can only measure `discrete` variables
-- Check ANOVA Test  
-Just to see if there's a statistically difference in a `continuous` variable between Fully Paid/Charged Off group.  
-It doesn't help much though. (some variable may not be normally distributed and that breaks the assumption of the test)
-- Try fitting the model using `all features` using `XGBoost` and its default parameters. I Then check its `feature importance`
-- All of the above steps are just for a guildline to help picking features manually
+To see predictive power of features with Mutual Information scores. 
+- Try fitting a model using default parameters and see the feature importances in consideration of choose features
 
 ## Model Training
 - Use `XGBoost` only (The original idea was to use RandomForst as a baseline, and try LightGBM, and other models)
@@ -75,22 +70,19 @@ It doesn't help much though. (some variable may not be normally distributed and 
 scale_pos_weight = (len(y_train) - sum(y_train)) / sum(y_train)
 ```
 - `roc-auc` as the evaluation metrics.
-- In previous step, I fitted the model using `all features`.
-- Trying selecting `22 features` to train, and the roc-auc improves a bit. 
-- Try resampling methods - `Under-sampling`, `Over-sampling` and `SMOTE`. None of them improves the performance.
+- Try resampling methods - `Under-sampling`, `Over-sampling` and `SMOTE`. None of them improves the performance. `SMOTE` tends to give overfitting result.
 - Hand-tune hyperparameter, the performance improves a bit.
 - Final Model - use Train+Validation to train and it improves Test Set performance.  
 I did make sure that I didn't use Test set in the `eval_set` parameter to make sure that test set is untouched
 
 | Experiment | Train-AUC | Valid-AUC | Test-AUC | Note |
 |---|---|---|---|---|
-| All features, default parameters | 0.7586 | 0.7211 | 0.7156 | |
-| Selected features, default params | 0.7544 | 0.7218 | 0.7169 | |
-| Selected features, default params, Under-sampling | 0.7631 | 0.7201 | 0.7120 | |
-| Selected features, default params, Over-sampling | 0.7527 | 0.7205 | 0.7142 | |
-| Selected features, default params, SMOTE | 0.9475 | 0.6956 | 0.6921 | Clearly overfitted |
-| Selected features, tuned params | 0.7422 | 0.7248 | 0.7190 | |
-| Final Model | 0.7615 | N/A | 0.7202 | Best |
+| Default params | 0.9171 | 0.9066 | 0.9090 | |
+| Default params + Under-sampling | 0.9233 | 0.9061 | 0.9074 | |
+| Default params + Over-sampling | 0.9181 | 0.9060 | 0.9083 | |
+| Default params + SMOTE | 0.9159 | 0.8607 | 0.8644 | Overfitting |
+| Tuned (No resampling) | 0.9170 | 0.9088 | 0.9102 | |
+| Final Model | 0.9199 | N/A | 0.9106 | Best |
 
 # Performance
 ## ROC Curve
